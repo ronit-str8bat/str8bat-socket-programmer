@@ -1,0 +1,18 @@
+#pragma once
+/* Copy this file to wifi_config.local.h. That file is excluded from Git.
+ * Do not include real credentials in support screenshots or build logs. */
+#define WIFI_FACTORY_SSID ""
+#define WIFI_FACTORY_PASSWORD ""
+#define WIFI_SETUP_PASSWORD "replace-with-your-private-setup-password"
+
+/* Optional remote services. Leave all empty for local-only operation. */
+#define OTA_MANIFEST_URL ""
+#define LOG_UPLOAD_URL ""
+#define SERVER_BEARER_TOKEN ""
+#define SERVER_CA_PEM ""
+/* Example PEM syntax:
+#define SERVER_CA_PEM \
+    "-----BEGIN CERTIFICATE-----\n" \
+    "YOUR_CA_CERTIFICATE_BASE64\n" \
+    "-----END CERTIFICATE-----\n"
+*/

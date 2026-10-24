@@ -51,8 +51,13 @@ target_include_directories(debugprobe PRIVATE src)
 
 # add version
 add_custom_target(version
-        ${CMAKE_SOURCE_DIR}/get-version.sh
+        COMMAND ${CMAKE_COMMAND}
+            "-DSOURCE_DIR=${CMAKE_SOURCE_DIR}"
+            "-DOUTPUT_DIR=${CMAKE_BINARY_DIR}/generated/probe"
+            -P "${CMAKE_SOURCE_DIR}/cmake/generate_version.cmake"
+        BYPRODUCTS "${CMAKE_BINARY_DIR}/generated/probe/version.h"
         WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
+        VERBATIM
 )
 
 target_include_directories(debugprobe PRIVATE
@@ -78,6 +83,10 @@ if (DEBUG_ON_PICO)
     elseif (PICO_BOARD STREQUAL "pico2")
         set_target_properties(debugprobe PROPERTIES
             OUTPUT_NAME "debugprobe_on_pico2"
+        )
+    elseif (PICO_BOARD STREQUAL "pico2_w")
+        set_target_properties(debugprobe PROPERTIES
+            OUTPUT_NAME "debugprobe_on_pico2_w"
         )
     else ()
         message(SEND_ERROR "Unsupported board ${PICO_BOARD}")

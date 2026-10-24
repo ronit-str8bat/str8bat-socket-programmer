@@ -43,7 +43,11 @@
 #define PROBE_UART_INTERFACE uart1
 #define PROBE_UART_BAUDRATE 115200
 
+// Pico 2 W's LED is on the wireless chip; GP25 is its chip-select signal.
+// Leave the status LED disabled on that board; USB/SWD do not need wireless.
+#ifndef RASPBERRYPI_PICO2_W
 #define PROBE_USB_CONNECTED_LED 25
+#endif
 
 #define PROBE_PRODUCT_STRING "Debugprobe on Pico (CMSIS-DAP)"
 

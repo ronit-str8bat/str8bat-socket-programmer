@@ -1,0 +1,9 @@
+/build-pico2w/
+/build-standalone/
+/standalone/tools/__pycache__/
+/build-network/
+/build-network-output.log
+/build-local-hotspot/
+/build-local-hotspot-output.log
+/standalone/private/
+/standalone/include/wifi_config.local.h
