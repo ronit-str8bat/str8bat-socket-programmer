@@ -54,7 +54,7 @@ void storage_export_end(void);
 /* Local factory distributor image store. The upload header is committed only
  * after the entire binary CRC is verified, so a power cut cannot launch a
  * partial image. These calls are core-0-only while no SWD job is active. */
-bool factory_bin_begin(uint32_t size, uint32_t expected_crc, uint32_t received_epoch);
+bool factory_bin_begin(uint32_t size, uint32_t expected_crc, uint32_t received_epoch,const char *label);
 bool factory_bin_write(uint32_t offset, const void *data, size_t size);
 bool factory_bin_commit(void);
 void factory_bin_abort(void);
@@ -65,8 +65,10 @@ stored_image_t factory_bin_image(void);
 int factory_bin_read(uint32_t offset, void *data, size_t size);
 uint32_t factory_bin_generation(void);
 uint32_t factory_bin_received_epoch(void);
+const char *factory_bin_label(void);
 
-/* Master-only list of exactly three authorized slave Pico IDs. */
+/* Master-only list of up to three authorized slave Pico IDs. The production
+ * list is fixed in wifi_config.h; empty slots are allowed for future slaves. */
 bool factory_peers_set(const char *csv_ids);
 bool factory_peer_allowed(const char *id);
 unsigned factory_peer_count(void);

@@ -54,9 +54,9 @@
 #define STM32_HALT_AFTER_VERIFY 0 /* Diagnostic build: keep CPU halted for external readback. */
 #endif
 #if STANDALONE_LOCAL_AP && FACTORY_ROLE == FACTORY_ROLE_MASTER
-#define PROGRAMMER_BUILD_ID "factory-master-v12"
+#define PROGRAMMER_BUILD_ID "factory-master-v21"
 #elif STANDALONE_LOCAL_AP && FACTORY_ROLE == FACTORY_ROLE_SLAVE
-#define PROGRAMMER_BUILD_ID "factory-slave-v12"
+#define PROGRAMMER_BUILD_ID "factory-slave-v21"
 #elif STANDALONE_LOCAL_AP
 #define PROGRAMMER_BUILD_ID "local-ap-v16"
 #elif STANDALONE_NETWORK

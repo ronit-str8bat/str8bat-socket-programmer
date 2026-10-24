@@ -159,10 +159,6 @@ int main(void) {
     while (true) {
         uint32_t now = to_ms_since_boot(get_absolute_time());
         bool pressed = !gpio_get(START_PIN);
-        bool factory_start=false;
-#if STANDALONE_NETWORK && STANDALONE_LOCAL_AP
-        if(!busy)factory_start=services_factory_take_program_job();
-#endif
         if (busy) {
             rgb(false, false, true);
             /* Busy presses are discarded; a held button never queues a job. */
@@ -179,7 +175,7 @@ int main(void) {
                 busy = false;
                 start_button_reset(&button, pressed, now);
             }
-        } else if (factory_start || start_button_update(&button, pressed, now)) {
+        } else if (start_button_update(&button, pressed, now)) {
 #if STANDALONE_NETWORK
             if (!services_job_begin()) {
                 waiting_for_first_start = false;

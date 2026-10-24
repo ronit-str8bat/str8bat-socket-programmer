@@ -1,0 +1,46 @@
+{
+	"sources" : 
+	[
+		{
+			"file" : "D:/shashank/str8bat/Rpi_pico/debugprobe/build-factory-slave-v16/pico-sdk/src/rp2350/boot_stage2/CMakeFiles/picotoolBuild"
+		},
+		{
+			"file" : "D:/shashank/str8bat/Rpi_pico/debugprobe/build-factory-slave-v16/pico-sdk/src/rp2350/boot_stage2/CMakeFiles/picotoolBuild.rule"
+		},
+		{
+			"file" : "D:/shashank/str8bat/Rpi_pico/debugprobe/build-factory-slave-v16/pico-sdk/src/rp2350/boot_stage2/CMakeFiles/picotoolBuild-complete.rule"
+		},
+		{
+			"file" : "D:/shashank/str8bat/Rpi_pico/debugprobe/build-factory-slave-v16/pico-sdk/src/rp2350/boot_stage2/picotool/src/picotoolBuild-stamp/picotoolBuild-build.rule"
+		},
+		{
+			"file" : "D:/shashank/str8bat/Rpi_pico/debugprobe/build-factory-slave-v16/pico-sdk/src/rp2350/boot_stage2/picotool/src/picotoolBuild-stamp/picotoolBuild-configure.rule"
+		},
+		{
+			"file" : "D:/shashank/str8bat/Rpi_pico/debugprobe/build-factory-slave-v16/pico-sdk/src/rp2350/boot_stage2/picotool/src/picotoolBuild-stamp/picotoolBuild-download.rule"
+		},
+		{
+			"file" : "D:/shashank/str8bat/Rpi_pico/debugprobe/build-factory-slave-v16/pico-sdk/src/rp2350/boot_stage2/picotool/src/picotoolBuild-stamp/picotoolBuild-install.rule"
+		},
+		{
+			"file" : "D:/shashank/str8bat/Rpi_pico/debugprobe/build-factory-slave-v16/pico-sdk/src/rp2350/boot_stage2/picotool/src/picotoolBuild-stamp/picotoolBuild-mkdir.rule"
+		},
+		{
+			"file" : "D:/shashank/str8bat/Rpi_pico/debugprobe/build-factory-slave-v16/pico-sdk/src/rp2350/boot_stage2/picotool/src/picotoolBuild-stamp/picotoolBuild-patch.rule"
+		},
+		{
+			"file" : "D:/shashank/str8bat/Rpi_pico/debugprobe/build-factory-slave-v16/pico-sdk/src/rp2350/boot_stage2/picotool/src/picotoolBuild-stamp/picotoolBuild-test.rule"
+		},
+		{
+			"file" : "D:/shashank/str8bat/Rpi_pico/debugprobe/build-factory-slave-v16/pico-sdk/src/rp2350/boot_stage2/picotool/src/picotoolBuild-stamp/picotoolBuild-update.rule"
+		}
+	],
+	"target" : 
+	{
+		"labels" : 
+		[
+			"picotoolBuild"
+		],
+		"name" : "picotoolBuild"
+	}
+}

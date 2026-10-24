@@ -1,0 +1,7 @@
+{
+	"InstallScripts" : 
+	[
+		"D:/shashank/str8bat/Rpi_pico/debugprobe/build-factory-master-v13/pioasm/cmake_install.cmake"
+	],
+	"Parallel" : false
+}

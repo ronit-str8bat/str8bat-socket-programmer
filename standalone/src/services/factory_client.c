@@ -15,8 +15,9 @@ static enum client_op op;
 static char pico_id[17],master_ssid[33],request[256],header[640],body[256];
 static size_t request_len,header_len,body_len;
 static uint32_t expected_size,expected_crc,expected_generation,expected_received,bin_received;
+static char expected_label[32];
 static uint64_t next_action;
-static bool scan_started,master_found,master_conflict,master_connected,receiving,program_ready;
+static bool scan_started,master_found,master_connecting,master_connected,receiving,program_ready;
 static bool download_pending;
 static bool header_done,request_sent,failed;
 static int pending_report=-1;
@@ -39,13 +40,13 @@ static void retry_later(void) {
 static int scan_cb(void *arg,const cyw43_ev_scan_result_t *result) {
     (void)arg;if(!result)return 0;
     char name[33];size_t n=result->ssid_len;if(n>32)n=32;memcpy(name,result->ssid,n);name[n]=0;
-    if(strncmp(name,"Str8bat_Master_",15))return 0;
-    if(!master_found){memcpy(master_ssid,name,n+1);master_found=true;}
-    else if(strcmp(master_ssid,name))master_conflict=true;
+    /* Ignore every Master-looking AP except the exact configured board ID. */
+    if(strcmp(name,master_ssid))return 0;
+    master_found=true;
     return 0;
 }
 static void start_scan(void) {
-    master_found=master_conflict=false;scan_started=true;
+    master_found=false;master_connecting=false;scan_started=true;
     cyw43_wifi_scan_options_t options={0};
     if(cyw43_wifi_scan(&cyw43_state,&options,NULL,scan_cb)!=0){scan_started=false;next_action=time_us_64()+3000000u;}
 }
@@ -59,14 +60,22 @@ static bool header_hex(const char *name,uint32_t *out) {
     char *end=NULL;unsigned long value=strtoul(p,&end,16);if(end==p || (*end!='\r'&&*end!='\n'))return false;
     *out=(uint32_t)value;return true;
 }
+static bool header_text(const char *name,char *out,size_t cap) {
+    const char *p=strstr(header,name);if(!p)return false;p+=strlen(name);
+    const char *end=strstr(p,"\r\n");if(!end)return false;
+    size_t n=(size_t)(end-p);if(!n || n>=cap)return false;
+    for(size_t i=0;i<n;i++)if(!((p[i]>='0'&&p[i]<='9') || (p[i]>='A'&&p[i]<='Z') ||
+        (p[i]>='a'&&p[i]<='z') || p[i]=='.' || p[i]=='_' || p[i]=='-'))return false;
+    memcpy(out,p,n);out[n]=0;return true;
+}
 static bool parse_header(void) {
     int status=0;if(sscanf(header,"HTTP/1.1 %d",&status)!=1)return false;
     uint32_t length=0;if(!header_number("Content-Length: ",&length))return false;
     if(op==CLIENT_JOB)return (status==200 && length<sizeof(body)) || (status==204 && !length);
     if(op==CLIENT_BIN) {
-        uint32_t crc=0,generation=0;
-        if(status!=200 || length<8u || length>FACTORY_BIN_MAX_SIZE || (length&7u) || !header_hex("X-Bin-CRC32: ",&crc) || !header_number("X-Bin-Generation: ",&generation))return false;
-        return crc==expected_crc && generation==expected_generation;
+        uint32_t crc=0,generation=0;char label[32];
+        if(status!=200 || length<8u || length>FACTORY_BIN_MAX_SIZE || (length&7u) || !header_hex("X-Bin-CRC32: ",&crc) || !header_number("X-Bin-Generation: ",&generation) || !header_text("X-Bin-Label: ",label,sizeof(label)))return false;
+        return crc==expected_crc && generation==expected_generation && !strcmp(label,expected_label);
     }
     return status==204 && !length;
 }
@@ -76,10 +85,10 @@ static void finish_response(void) {
         body[body_len]=0;
         unsigned long generation=0,size=0,crc=0,received=0;
         if(!body_len){retry_later();return;}
-        if(sscanf(body,"{\"generation\":%lu,\"size\":%lu,\"crc32\":\"%8lx\",\"received\":%lu}",&generation,&size,&crc,&received)!=4 ||
+        if(sscanf(body,"{\"generation\":%lu,\"size\":%lu,\"crc32\":\"%8lx\",\"received\":%lu,\"label\":\"%31[0-9A-Za-z._-]\"}",&generation,&size,&crc,&received,expected_label)!=5 ||
            size<8u || size>FACTORY_BIN_MAX_SIZE || (size&7u) || (uint32_t)crc==local_image_crc()) {retry_later();return;}
         expected_generation=(uint32_t)generation;expected_size=(uint32_t)size;expected_crc=(uint32_t)crc;expected_received=(uint32_t)received;
-        if(!factory_bin_begin(expected_size,expected_crc,expected_received)){retry_later();return;}
+        if(!factory_bin_begin(expected_size,expected_crc,expected_received,expected_label)){retry_later();return;}
         reset_connection();download_pending=true;next_action=time_us_64();return;
     }
     if(op==CLIENT_BIN) {
@@ -131,7 +140,9 @@ static bool start_request(enum client_op next,const char *text) {
     return true;
 }
 static void start_job(void) {
-    char text[256];snprintf(text,sizeof(text),"GET /factory/job?id=%s&crc=%08lx HTTP/1.1\r\nHost: 192.168.4.1\r\nX-Factory-Key: %s\r\nConnection: close\r\n\r\n",pico_id,(unsigned long)local_image_crc(),FACTORY_GROUP_KEY);
+    /* The generation distinguishes a new phone upload whose bytes happen to
+       have the same CRC as the Slave's embedded or previously received BIN. */
+    char text[256];snprintf(text,sizeof(text),"GET /factory/job?id=%s&crc=%08lx&generation=%lu HTTP/1.1\r\nHost: 192.168.4.1\r\nX-Factory-Key: %s\r\nConnection: close\r\n\r\n",pico_id,(unsigned long)local_image_crc(),(unsigned long)factory_bin_generation(),FACTORY_GROUP_KEY);
     (void)start_request(CLIENT_JOB,text);
 }
 static void start_bin(void) {
@@ -146,6 +157,8 @@ static void start_report(unsigned result) {
 void factory_client_init(const char *id) {
     if(!id || strlen(id)!=16)return;
     memcpy(pico_id,id,17);
+    int n=snprintf(master_ssid,sizeof(master_ssid),"Str8bat_Master_%s",FACTORY_MASTER_ID);
+    if(n<0 || n>=(int)sizeof(master_ssid))return;
     cyw43_arch_enable_sta_mode();
     start_scan();
 }
@@ -153,15 +166,25 @@ void factory_client_poll(bool programmer_busy) {
     uint64_t now=time_us_64();
     if(scan_started && !cyw43_wifi_scan_active(&cyw43_state)) {
         scan_started=false;
-        if(master_found && !master_conflict && cyw43_arch_wifi_connect_async(master_ssid,WIFI_LOCAL_PASSWORD,CYW43_AUTH_WPA2_AES_PSK)==PICO_OK) next_action=now+1000000u;
+        if(master_found && cyw43_arch_wifi_connect_async(master_ssid,WIFI_LOCAL_PASSWORD,CYW43_AUTH_WPA2_AES_PSK)==PICO_OK) {
+            /* Association and DHCP can take several seconds. Do not restart a
+             * scan while the CYW43 is still joining the Master AP. */
+            master_connecting=true;
+            next_action=now+(uint64_t)WIFI_CONNECT_TIMEOUT_MS*1000u;
+        }
         else {master_found=false;next_action=now+5000000u;}
     }
     int link=cyw43_tcpip_link_status(&cyw43_state,CYW43_ITF_STA);
     master_connected=link==CYW43_LINK_UP;
     if(!master_connected) {
-        if(!scan_started && now>=next_action)start_scan();
+        if(master_connecting && (link==CYW43_LINK_FAIL || link==CYW43_LINK_BADAUTH || now>=next_action)) {
+            cyw43_wifi_leave(&cyw43_state,CYW43_ITF_STA);
+            master_connecting=false;master_found=false;next_action=now+5000000u;
+        }
+        if(!master_connecting && !scan_started && now>=next_action)start_scan();
         return;
     }
+    master_connecting=false;
     if(pcb) {
         if(!request_sent) {
             u16_t n=(u16_t)(request_len>tcp_sndbuf(pcb)?tcp_sndbuf(pcb):request_len);

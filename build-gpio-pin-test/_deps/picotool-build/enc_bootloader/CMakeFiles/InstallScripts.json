@@ -1,0 +1,7 @@
+{
+	"InstallScripts" : 
+	[
+		"D:/shashank/str8bat/Rpi_pico/debugprobe/build-gpio-pin-test/_deps/picotool-build/enc_bootloader/cmake_install.cmake"
+	],
+	"Parallel" : false
+}

@@ -133,28 +133,27 @@ static void page(void) {
 #if FACTORY_ROLE == FACTORY_ROLE_MASTER
     snprintf(body,sizeof(body),
         "<!doctype html><meta name=viewport content='width=device-width,initial-scale=1'><title>Factory master</title>"
-        "<h1>Factory master programmer</h1><p id=s>Connecting...</p><p>Keep this Wi-Fi connection despite the no-Internet notice.</p>"
+        "<h1>Factory master programmer</h1><p id=s>Connecting...</p><p id=v>Current BIN: checking...</p><p>Keep this Wi-Fi connection despite the no-Internet notice.</p>"
         "<button id=t>Set clock from this phone</button> <input id=f type=file accept='.bin,application/octet-stream'> <button id=u>Upload BIN to slaves</button>"
-        "<p>Before the first upload, enter the three 16-character slave Pico IDs, separated by commas.</p>"
-        "<input id=p size=58 placeholder='0011223344556677,0011223344556678,0011223344556679'> <button id=ps>Save slave IDs</button>"
+        "<p>Authorized Slave IDs are fixed in this Master UF2.</p>"
         "<p><button id=d>Download this Pico CSV</button> <button id=c disabled>Clear downloaded logs</button></p>"
-        "<script nonce='%s'>let tok='',tag='';const s=document.getElementById('s'),c=document.getElementById('c');"
+        "<script nonce='%s'>let tok='',tag='';const s=document.getElementById('s'),v=document.getElementById('v'),c=document.getElementById('c');"
         "async function req(u,o){let r=await fetch(u,o);if(!r.ok)throw Error(await r.text());return r}"
+        "async function retry(u,o){let e;for(let i=0;i<5;i++){try{return await req(u,o)}catch(x){e=x;if(i<4)await new Promise(r=>setTimeout(r,350))}}throw e}"
         "async function sync(){await req('/sync-time',{method:'POST',headers:{'Content-Type':'application/json','X-Programmer-Token':tok},body:JSON.stringify({unix_seconds:Math.floor(Date.now()/1000)})})}"
         "document.getElementById('t').onclick=()=>sync().then(()=>s.textContent='Clock set.').catch(e=>s.textContent=e.message);"
-        "document.getElementById('ps').onclick=()=>req('/factory/pair',{method:'POST',headers:{'Content-Type':'text/plain','X-Programmer-Token':tok},body:document.getElementById('p').value.trim()}).then(()=>s.textContent='Three slave IDs saved.').catch(e=>s.textContent=e.message);"
-        "document.getElementById('u').onclick=async()=>{try{let f=document.getElementById('f').files[0];if(!f)throw Error('Select an STM32 BIN file.');if(f.size<8||f.size>524288||f.size%%8)throw Error('BIN must be 8 bytes to 512 KiB and a multiple of 8 bytes.');let a=new Uint8Array(await f.arrayBuffer());await req('/bin/begin',{method:'POST',headers:{'Content-Type':'application/json','X-Programmer-Token':tok},body:JSON.stringify({size:f.size,crc32:'00000000'})});for(let o=0;o<a.length;o+=256){let e=Math.min(o+256,a.length),h='';for(let n=o;n<e;n++){let v=a[n];h+='0123456789abcdef'[v>>4]+'0123456789abcdef'[v&15]}s.textContent='Uploading '+Math.min(100,Math.round(e*100/a.length))+'%%';await req('/bin/chunk-get?offset='+o+'&data='+h,{headers:{'X-Programmer-Token':tok}})}await req('/bin/commit?token='+tok);s.textContent='BIN verified. Sending to the paired slaves.'}catch(e){s.textContent=e.message}};"
+        "document.getElementById('u').onclick=async()=>{try{let f=document.getElementById('f').files[0];if(!f)throw Error('Select an STM32 BIN file.');if(f.size<8||f.size>524288||f.size%%8)throw Error('BIN must be 8 bytes to 512 KiB and a multiple of 8 bytes.');let name=f.name.replace(/[^A-Za-z0-9._-]/g,'_');let label=(name.length>31?name.slice(-31):name)||'uploaded.bin';let a=new Uint8Array(await f.arrayBuffer());await retry('/bin/begin',{method:'POST',headers:{'Content-Type':'application/json','X-Programmer-Token':tok},body:JSON.stringify({size:f.size,crc32:'00000000',label:label})});for(let o=0;o<a.length;o+=512){let e=Math.min(o+512,a.length),h='';for(let n=o;n<e;n++){let v=a[n];h+='0123456789abcdef'[v>>4]+'0123456789abcdef'[v&15]}s.textContent='Uploading '+Math.min(100,Math.round(e*100/a.length))+'%%';await retry('/bin/chunk-get?offset='+o+'&data='+h,{headers:{'X-Programmer-Token':tok},cache:'no-store'})}await retry('/bin/commit?token='+tok,{cache:'no-store'});s.textContent='BIN verified. Sending to the paired slaves.'}catch(e){s.textContent=e.message}};"
         "document.getElementById('d').onclick=async()=>{try{c.disabled=true;let r=await req('/logs',{method:'HEAD'});tag=r.headers.get('ETag');window.location.assign('/logs?etag='+tag.slice(1,-1));c.disabled=false}catch(e){s.textContent=e.message}};"
         "c.onclick=async()=>{try{await req('/logs',{method:'DELETE',headers:{'If-Match':tag,'X-Programmer-Token':tok}});c.disabled=true}catch(e){s.textContent=e.message}};"
-        "(async()=>{try{let j=await(await req('/status')).json();tok=j.token;document.getElementById('p').value=j.peers||'';s.textContent=j.ssid+' — '+j.status+' ('+j.build+')'}catch(e){s.textContent=e.message}})();</script>",token);
+        "(async()=>{try{let j=await(await req('/status')).json();tok=j.token;s.textContent=j.ssid+' — '+j.status+' ('+j.build+')';v.textContent='Current BIN: '+j.bin_version+' | '+j.bin_source+' | CRC32 '+j.bin_crc32+' | generation '+j.bin_generation}catch(e){s.textContent=e.message}})();</script>",token);
 #else
     snprintf(body,sizeof(body),
         "<!doctype html><meta name=viewport content='width=device-width,initial-scale=1'><title>Pico programmer</title>"
-        "<h1>STM32 programming logs</h1><p id=s>Connecting...</p><p>Keep this Wi-Fi connection despite the no-Internet notice.</p>"
+        "<h1>STM32 programming logs</h1><p id=s>Connecting...</p><p id=v>Current BIN: checking...</p><p>Keep this Wi-Fi connection despite the no-Internet notice.</p>"
         "<button id=t>Set clock from this phone</button> <button id=d>Download CSV</button> "
         "<button id=c disabled>Clear downloaded logs</button><p>Clear only after confirming the CSV was saved. New records are protected.</p>"
         "<p>Archives, if present: <a href=/logs/utc-archive>previous UTC logs</a> / <a href=/logs/legacy-current>old logs</a> / <a href=/logs/legacy-current-2>older logs</a> / <a href=/logs/legacy-pending>old pending upload</a>.</p>"
-        "<script nonce='%s'>let tok='',tag='';const s=document.getElementById('s'),c=document.getElementById('c');"
+        "<script nonce='%s'>let tok='',tag='';const s=document.getElementById('s'),v=document.getElementById('v'),c=document.getElementById('c');"
         "async function req(u,o){let r=await fetch(u,o);if(!r.ok)throw Error(await r.text());return r}"
         "async function sync(){await req('/sync-time',{method:'POST',headers:{'Content-Type':'application/json','X-Programmer-Token':tok},"
         "body:JSON.stringify({unix_seconds:Math.floor(Date.now()/1000)})});s.textContent='Clock set to IST (UTC+05:30). Ready.'}"
@@ -165,7 +164,7 @@ static void page(void) {
         "window.location.assign('/logs?etag='+tag.slice(1,-1))}catch(e){s.textContent=e.message}};"
         "c.onclick=async()=>{if(!confirm('Have you saved the downloaded CSV? Clear those records?'))return;try{await req('/logs',{method:'DELETE',"
         "headers:{'If-Match':tag,'X-Programmer-Token':tok}});c.disabled=true;s.textContent='Downloaded logs cleared.'}catch(e){s.textContent=e.message}};"
-        "(async()=>{try{let j=await(await req('/status')).json();tok=j.token;"
+        "(async()=>{try{let j=await(await req('/status')).json();tok=j.token;v.textContent='Current BIN: '+j.bin_version+' | '+j.bin_source+' | CRC32 '+j.bin_crc32+' | generation '+j.bin_generation;"
         "if(!j.clock_set)await sync();else s.textContent='Hardware clock running in IST. Ready.'}catch(e){s.textContent=e.message}})();</script>",token);
 #endif
     respond("200 OK","text/html; charset=utf-8",body);
@@ -223,9 +222,9 @@ static bool query_hex_value(const char *path,const char *name,uint8_t *out,size_
     }
     return false;
 }
-static bool parse_upload_begin(const char *body,uint32_t *size,uint32_t *crc) {
+static bool parse_upload_begin(const char *body,uint32_t *size,uint32_t *crc,char label[32]) {
     unsigned long s=0,c=0;char hex[9]={0};
-    if(sscanf(body,"{\"size\":%lu,\"crc32\":\"%8[0-9a-fA-F]\"}",&s,hex)!=2 || strlen(hex)!=8)return false;
+    if(sscanf(body,"{\"size\":%lu,\"crc32\":\"%8[0-9a-fA-F]\",\"label\":\"%31[0-9A-Za-z._-]\"}",&s,hex,label)!=3 || strlen(hex)!=8)return false;
     if(sscanf(hex,"%lx",&c)!=1 || s<8u || s>FACTORY_BIN_MAX_SIZE || (s&7u))return false;
     *size=(uint32_t)s;*crc=(uint32_t)c;return true;
 }
@@ -245,8 +244,8 @@ static void start_factory_download(const char *id) {
     stored_image_t image=factory_master_image();download_size=image.size;
     int n=snprintf(response,sizeof(response),
         "HTTP/1.1 200 OK\r\nContent-Type: application/octet-stream\r\nContent-Length: %lu\r\n"
-        "X-Bin-CRC32: %08lx\r\nX-Bin-Generation: %lu\r\nCache-Control: no-store\r\nConnection: close\r\n\r\n",
-        (unsigned long)image.size,(unsigned long)image.crc,(unsigned long)image.revision);
+        "X-Bin-CRC32: %08lx\r\nX-Bin-Generation: %lu\r\nX-Bin-Label: %s\r\nCache-Control: no-store\r\nConnection: close\r\n\r\n",
+        (unsigned long)image.size,(unsigned long)image.crc,(unsigned long)image.revision,factory_bin_label());
     if(n<0 || n>=(int)sizeof(response)){close_client();return;}
     response_size=(size_t)n;response_sent=0;responding=true;factory_distribution=true;expires=time_us_64()+300000000u;
 }
@@ -255,9 +254,11 @@ static void handle(bool busy) {
     char *end=strstr(request,"\r\n\r\n");
     if(overflow){message("413 Payload Too Large","Request too large.");return;}
     if(!end)return;
-    char method[8],path[768],version[16],extra;
+    /* A 512-byte BIN chunk is hex encoded in the GET URL (1,024 characters).
+       Allow space for that data and the query parameters. */
+    char method[8],path[2048],version[16],extra;
     char *line=strstr(request,"\r\n");if(!line)return;
-    *line=0;int parsed=sscanf(request,"%7s %767s %15s %c",method,path,version,&extra);*line='\r';
+    *line=0;int parsed=sscanf(request,"%7s %2047s %15s %c",method,path,version,&extra);*line='\r';
     if(parsed!=3 || (strcmp(version,"HTTP/1.1") && strcmp(version,"HTTP/1.0"))){message("400 Bad Request","Unsupported HTTP version.");return;}
     char value[80];size_t length=0;
     int cl=field("Content-Length",value,sizeof(value));
@@ -285,12 +286,16 @@ static void handle(bool busy) {
     if(!strcmp(method,"GET") && !strcmp(path,"/status")) {
         char body[768],date[20]="UNSET",ssid[33],peers[55]="";if(local_time_valid())local_format_ist(local_time_now(),date);
         local_device_ssid(ssid);
+        bool has_factory_bin=factory_bin_available();
+        stored_image_t current_bin=has_factory_bin?factory_bin_image():storage_image();
+        const char *bin_source=has_factory_bin?"factory-uploaded":"embedded";
 #if FACTORY_ROLE == FACTORY_ROLE_MASTER
         snprintf(peers,sizeof(peers),"%s,%s,%s",factory_peer_id(0),factory_peer_id(1),factory_peer_id(2));
 #endif
-        snprintf(body,sizeof(body),"{\"build\":\"%s\",\"device_id\":\"%s\",\"ssid\":\"%s\",\"firmware_version\":\"%s\",\"clock_set\":%s,\"clock_source\":\"RP2350_POWMAN\",\"ist\":\"%s\",\"timezone\":\"IST\",\"status\":\"%s\",\"busy\":%s,\"factory_bin\":%s,\"factory_transfer\":%s,\"peers\":\"%s\",\"token\":\"%s\"}",
-            PROGRAMMER_BUILD_ID,storage_device_id(),ssid,TARGET_FIRMWARE_VERSION,local_time_valid()?"true":"false",date,services_status(),busy?"true":"false",
-            factory_bin_available()?"true":"false",factory_distribution?"true":"false",peers,token);
+        snprintf(body,sizeof(body),"{\"build\":\"%s\",\"device_id\":\"%s\",\"ssid\":\"%s\",\"firmware_version\":\"%s\",\"bin_version\":\"%s\",\"bin_source\":\"%s\",\"bin_generation\":%lu,\"bin_crc32\":\"%08lx\",\"clock_set\":%s,\"clock_source\":\"RP2350_POWMAN\",\"ist\":\"%s\",\"timezone\":\"IST\",\"status\":\"%s\",\"busy\":%s,\"factory_bin\":%s,\"factory_transfer\":%s,\"peers\":\"%s\",\"token\":\"%s\"}",
+            PROGRAMMER_BUILD_ID,storage_device_id(),ssid,TARGET_FIRMWARE_VERSION,factory_bin_label(),bin_source,
+            (unsigned long)current_bin.revision,(unsigned long)current_bin.crc,local_time_valid()?"true":"false",date,services_status(),busy?"true":"false",
+            has_factory_bin?"true":"false",factory_distribution?"true":"false",peers,token);
         respond("200 OK","application/json",body);return;
     }
     if(!strcmp(method,"HEAD") && !strcmp(path,"/logs")){start_download(0,busy,true,NULL);return;}
@@ -306,16 +311,14 @@ static void handle(bool busy) {
     if(!strcmp(method,"GET") && !strcmp(path,"/logs/utc-archive")){start_download(3,busy,false,NULL);return;}
     if(!strcmp(method,"POST") && !strcmp(path,"/factory/pair")) {
 #if FACTORY_ROLE == FACTORY_ROLE_MASTER
-        if(!authorized()){message("403 Forbidden","Missing programmer token.");return;}
-        if(busy || cl!=1 || !factory_peers_set(end+4)){message("400 Bad Request","Enter exactly three unique 16-character Pico IDs.");return;}
-        message("204 No Content","");return;
+        message("403 Forbidden","Slave IDs are fixed in this Master UF2.");return;
 #else
         message("404 Not Found","Factory pairing is available only on the master.");return;
 #endif
     }
     if(!strcmp(method,"POST") && (!strcmp(path,"/bin/begin") || !strncmp(path,"/bin/begin?",11))) {
         bool auth=FACTORY_ROLE==FACTORY_ROLE_SLAVE?factory_authorized():authorized();
-        uint32_t size,crc,received=local_time_valid()?local_time_now():0;
+        uint32_t size,crc,received=local_time_valid()?local_time_now():0;char label[32]={0};
         char value2[16];
         if(FACTORY_ROLE==FACTORY_ROLE_SLAVE && query_value(path,"received",value2,sizeof(value2))) {
             unsigned long epoch=0;if(sscanf(value2,"%lu",&epoch)!=1){message("400 Bad Request","Invalid receive time.");return;}received=(uint32_t)epoch;
@@ -323,7 +326,7 @@ static void handle(bool busy) {
         if(!auth){message("403 Forbidden","Upload is not authorized.");return;}
         /* An interrupted phone upload must not prevent a clean retry. */
         if(FACTORY_ROLE==FACTORY_ROLE_MASTER)factory_bin_abort();
-        if(busy || cl!=1 || !parse_upload_begin(end+4,&size,&crc) || !factory_bin_begin(size,crc,received)) {
+        if(busy || cl!=1 || !parse_upload_begin(end+4,&size,&crc,label) || !factory_bin_begin(size,crc,received,label)) {
             message("409 Conflict","Cannot begin BIN upload.");return;
         }
         message("204 No Content","");return;
@@ -336,7 +339,7 @@ static void handle(bool busy) {
     }
     if(!strcmp(method,"GET") && !strncmp(path,"/bin/chunk-get?",15)) {
         bool auth=FACTORY_ROLE==FACTORY_ROLE_SLAVE?factory_authorized():authorized();char off[16];unsigned long offset=0;
-        uint8_t chunk[256];size_t chunk_size=0;
+        uint8_t chunk[512];size_t chunk_size=0;
         if(!auth || !query_value(path,"offset",off,sizeof(off)) || sscanf(off,"%lu",&offset)!=1 ||
            !query_hex_value(path,"data",chunk,sizeof(chunk),&chunk_size) ||
            !factory_bin_write((uint32_t)offset,chunk,chunk_size)) {message("409 Conflict","BIN chunk rejected.");return;}
@@ -360,14 +363,20 @@ static void handle(bool busy) {
     if(!strcmp(method,"GET") && !strncmp(path,"/factory/job?",13)) {
 #if FACTORY_ROLE == FACTORY_ROLE_MASTER
         char id[17];if(!factory_authorized() || !factory_id_from_path(path,id)){message("403 Forbidden","Unpaired slave.");return;}
-        char crc[16];unsigned long current_crc=0;
+        char crc[16],generation_text[16];unsigned long current_crc=0,current_generation=0;
         if(!query_value(path,"crc",crc,sizeof(crc)) || strlen(crc)!=8 || strspn(crc,"0123456789abcdefABCDEF")!=8 ||
            sscanf(crc,"%lx",&current_crc)!=1){message("400 Bad Request","Missing slave image CRC.");return;}
+        /* Older Slave builds omit generation and are treated as generation 0,
+           which safely causes one update from a Master-held factory image. */
+        if(query_value(path,"generation",generation_text,sizeof(generation_text)) &&
+           (!generation_text[0] || sscanf(generation_text,"%lu",&current_generation)!=1)) {
+            message("400 Bad Request","Invalid slave image generation.");return;
+        }
         stored_image_t image=factory_master_image();
-        if((uint32_t)current_crc==image.crc){message("204 No Content","");return;}
+        if((uint32_t)current_crc==image.crc && (uint32_t)current_generation==image.revision){message("204 No Content","");return;}
         char body[192];
-        snprintf(body,sizeof(body),"{\"generation\":%lu,\"size\":%lu,\"crc32\":\"%08lx\",\"received\":%lu}",
-                 (unsigned long)image.revision,(unsigned long)image.size,(unsigned long)image.crc,(unsigned long)factory_bin_received_epoch());
+        snprintf(body,sizeof(body),"{\"generation\":%lu,\"size\":%lu,\"crc32\":\"%08lx\",\"received\":%lu,\"label\":\"%s\"}",
+                 (unsigned long)image.revision,(unsigned long)image.size,(unsigned long)image.crc,(unsigned long)factory_bin_received_epoch(),factory_bin_label());
         respond("200 OK","application/json",body);return;
 #else
         message("404 Not Found","Slave does not distribute BIN files.");return;

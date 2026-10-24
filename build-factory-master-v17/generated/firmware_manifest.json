@@ -1,0 +1,7 @@
+{
+  "filename": "production_firmware_v4.0.2.bin",
+  "bytes": 524288,
+  "base": "0x08000000",
+  "crc32": "0e60efc5",
+  "sha256": "3d656a56028eb7cda59d7ec13c2a07275e3ef281848754afe16ca96d6eca98b9"
+}

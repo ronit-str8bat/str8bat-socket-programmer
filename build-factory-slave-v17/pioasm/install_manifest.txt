@@ -1,0 +1,5 @@
+D:/shashank/str8bat/Rpi_pico/debugprobe/build-factory-slave-v17/pioasm-install/pioasm/pioasm.exe
+D:/shashank/str8bat/Rpi_pico/debugprobe/build-factory-slave-v17/pioasm-install/pioasm/pioasmTargets.cmake
+D:/shashank/str8bat/Rpi_pico/debugprobe/build-factory-slave-v17/pioasm-install/pioasm/pioasmTargets-release.cmake
+D:/shashank/str8bat/Rpi_pico/debugprobe/build-factory-slave-v17/pioasm-install/pioasm/pioasmConfig.cmake
+D:/shashank/str8bat/Rpi_pico/debugprobe/build-factory-slave-v17/pioasm-install/pioasm/pioasmConfigVersion.cmake
